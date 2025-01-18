@@ -14,32 +14,55 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface ChartComponentProps {
-  data: any; // Adjust the type according to your data structure
+  data: any;
+  type?: string;
 }
 
-const ChartComponent: React.FC<ChartComponentProps> = ({ data }) => {
+const ChartComponent: React.FC<ChartComponentProps> = ({ data, type }) => {
   const [chartData, setChartData] = useState<any>(null);
 
   useEffect(() => {
-    if (Array.isArray(data)) {
-      const sortedData = data.sort((a: any, b: any) => b.time - a.time).slice(0, 10);
+    function seconds2hours(seconds: number) {
+      return seconds / 3600.0;
+    }
 
-      setChartData({
-        labels: sortedData.map((item: any) => item.label),
-        datasets: [
-          {
-            label: 'Time',
-            data: sortedData.map((item: any) => item.time),
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-          },
-        ],
-      });
+    if (Array.isArray(data)) {
+      let sortedData;
+      if (type === "totalPlayTime") {
+        sortedData = data.sort((a: any, b: any) => b.total_time - a.total_time).slice(0, 10);
+        setChartData({
+          labels: sortedData.map((item: any) => item.user_name),
+          datasets: [
+            {
+              label: 'Hours',
+              data: sortedData.map((item: any) => seconds2hours(item.total_time)),
+              backgroundColor: 'rgba(153, 102, 255, 0.2)',
+              borderColor: 'rgba(153, 102, 255, 1)',
+              borderWidth: 1,
+            },
+          ],
+        });
+      } else {
+        sortedData = data.sort((a: any, b: any) => b.time - a.time).slice(0, 10);
+        setChartData({
+          labels: sortedData.map((item: any) => item.label),
+          datasets: [
+            {
+              label: 'Hours',
+              data: sortedData.map((item: any) => seconds2hours(item.time)),
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1,
+            },
+          ],
+        });
+      }
     } else {
       console.error('Data is not an array:', data);
     }
-  }, [data]);
+  }, [data, type]);
+
+
 
   return (
     <div>

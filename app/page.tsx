@@ -16,12 +16,15 @@ export default async function Home() {
 
   const movieData = await report("user_usage_stats/MoviesReport", params);
   const tvData = await report("user_usage_stats/GetTvShowsReport", params);
+  const userData = await report("user_usage_stats/user_activity", params);
   return (
     <main>
-      <h1>Top 10 Movies by Time</h1>
+      <h1>Top 10 Movies by Watch Time</h1>
       <ChartComponent data={movieData}/>
-      <h1>Top 10 TV Shows by Time</h1>
+      <h1>Top 10 TV Shows by Watch Time</h1>
       <ChartComponent data={tvData}/>
+      <h1>Top 10 Users by Total Play Time</h1>
+      <ChartComponent data={userData} type="totalPlayTime"/>
     </main>
   );
 }
