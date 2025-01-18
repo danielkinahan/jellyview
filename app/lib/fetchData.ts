@@ -17,7 +17,6 @@ const fetchData = async (days: number, endDate: string, stamp: number, timezoneO
 
   try {
     const response = await axios.get(url, { params, headers });
-    console.log('response:', response);
     return response.data;
   } catch (error) {
     console.error('Error fetching data:', error);

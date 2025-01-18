@@ -15,11 +15,14 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const ChartComponent = () => {
   const [chartData, setChartData] = useState<any>(null);
+  const [days, setDays] = useState(28);
+  const [endDate, setEndDate] = useState('2025-01-15');
+  const [timezoneOffset, setTimezoneOffset] = useState(-5);
 
   useEffect(() => {
     const getData = async () => {
       try {
-        const response = await fetch('/api/movies?days=28&endDate=2025-01-15&stamp=1736989969794&timezoneOffset=-5');
+        const response = await fetch(`/api/movies?days=${days}&endDate=${endDate}&timezoneOffset=${timezoneOffset}`);
         const data = await response.json();
 
         if (Array.isArray(data)) {
@@ -46,11 +49,15 @@ const ChartComponent = () => {
     };
 
     getData();
-  }, []);
+  }, [days, endDate, timezoneOffset]);
 
   if (!chartData) return <div>Loading...</div>;
 
-  return <Bar data={chartData} />;
+  return (
+    <div>
+      <Bar data={chartData} />
+    </div>
+  );
 };
 
 export default ChartComponent;
