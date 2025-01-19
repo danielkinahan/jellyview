@@ -14,41 +14,60 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 interface ChartComponentProps {
-  data: any;
+  data: Record<string, number>;
   type?: string;
 }
 
+interface ChartData {
+  user_name?: string;
+  displayName?: string;
+  label?: string;
+  total_time?: number;
+  requestCount?: number;
+  time?: number;
+  sizeOnDisk?: number;
+}
+
 const ChartComponent: React.FC<ChartComponentProps> = ({ data, type }) => {
-  const [chartData, setChartData] = useState<any>(null);
+  const [chartData, setChartData] = useState<{
+    labels: string[];
+    datasets: {
+      label: string;
+      data: number[];
+      backgroundColor: string;
+      borderColor: string;
+      borderWidth: number;
+    }[];
+  } | null>(null);
 
   useEffect(() => {
     const seconds2hours = (seconds: number) => seconds / 3600.0;
 
     if (Array.isArray(data) || type === "sizeOnDisk") {
       const sortedData = Array.isArray(data)
-        ? data.sort((a: any, b: any) => {
-            if (type === "totalPlayTime") return b.total_time - a.total_time;
-            if (type === "requests") return b.requestCount - a.requestCount;
-            return b.time - a.time;
+        ? data.sort((a: ChartData, b: ChartData) => {
+            if (type === "totalPlayTime") return (b.total_time ?? 0) - (a.total_time ?? 0);
+            if (type === "requests") return (b.requestCount ?? 0) - (a.requestCount ?? 0);
+            return (b.time ?? 0) - (a.time ?? 0);
           }).slice(0, 10)
         : Object.entries(data)
-            .map(([label, sizeOnDisk]) => ({ label: label.replace(/^\d+ - /, ''), sizeOnDisk }))
-            .sort((a: any, b: any) => b.sizeOnDisk - a.sizeOnDisk);
+            .map(([label, sizeOnDisk]) => ({ label: label.replace(/^\d+ - /, ''), sizeOnDisk: sizeOnDisk as number }))
+            .sort((a: ChartData, b: ChartData) => (b.sizeOnDisk ?? 0) - (a.sizeOnDisk ?? 0));
 
       setChartData({
-        labels: sortedData.map((item: any) => {
-          if (type === "totalPlayTime") return item.user_name;
-          if (type === "requests") return item.displayName;
-          return item.label;
+        labels: sortedData.map((item: ChartData) => {
+          if (type === "totalPlayTime") return item.user_name ?? '';
+          if (type === "requests") return item.displayName ?? '';
+          return item.label ?? '';
         }),
         datasets: [
           {
             label: type === "requests" ? 'Requests' : type === "sizeOnDisk" ? 'Size on Disk (GB)' : 'Hours',
-            data: sortedData.map((item: any) => {
-              if (type === "totalPlayTime") return seconds2hours(item.total_time);
-              if (type === "requests") return item.requestCount;
-              if (type === "sizeOnDisk") return item.sizeOnDisk;
-              return seconds2hours(item.time);
+            data: sortedData.map((item: ChartData) => {
+              if (type === "totalPlayTime") return seconds2hours(item.total_time ?? 0);
+              if (type === "requests") return item.requestCount ?? 0;
+              if (type === "sizeOnDisk") return item.sizeOnDisk ?? 0;
+              return seconds2hours(item.time ?? 0);
             }),
             backgroundColor: type === "totalPlayTime" ? 'rgba(153, 102, 255, 0.2)' : 'rgba(75, 192, 192, 0.2)',
             borderColor: type === "totalPlayTime" ? 'rgba(153, 102, 255, 1)' : 'rgba(75, 192, 192, 1)',

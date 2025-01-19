@@ -2,11 +2,30 @@ import ChartComponent from './components/ChartComponent';
 import { unstable_cache } from 'next/cache';
 import styles from './page.module.css';
 
+interface Tag {
+  id: number;
+  label: string;
+}
+
+interface Movie {
+  sizeOnDisk: number;
+}
+
+interface Series {
+  statistics: {
+    sizeOnDisk: number;
+  };
+}
+
+interface Params {
+  [key: string]: string | number;
+}
+
 export default async function Home() {
-  var days = 2000;
+  let days = 2000;
   const endDate = new Date().toISOString().slice(0, 10);
 
-  const allParams = {
+  const allParams: Params = {
     days,
     end_date: endDate,
   };
@@ -17,7 +36,7 @@ export default async function Home() {
 
   days = 30;
 
-  const monthParams = {
+  const monthParams: Params = {
     days,
     end_date: endDate,
   };
@@ -29,16 +48,17 @@ export default async function Home() {
   const take = 100;
   const sort = 'requests';
 
-  const jellyseerParams = {
+  const jellyseerParams: Params = {
     take,
     sort
   };
 
   const requestData = await report("jellyseerr", "user", jellyseerParams);
 
-  const radarrParams = {};
-  const radarrTags = await report("radarr", "tag", radarrParams);
-  const userSizeOnDisk = await getUserSizeOnDisk(radarrTags);
+  const arrParams: Params = {};
+  const radarrTags = await report("radarr", "tag", arrParams);
+  const sonarrTags = await report("sonarr", "tag", arrParams);
+  const userSizeOnDisk = await getUserSizeOnDisk(radarrTags, sonarrTags);
 
   return (
     <main className={styles.main}>
@@ -79,7 +99,7 @@ export default async function Home() {
           <ChartComponent data={requestData} type="requests"/>
         </div>
         <div className={styles.chart}>
-        <h2>Size on Disk (GB)</h2>
+          <h2>Size on Disk (GB)</h2>
           <ChartComponent data={userSizeOnDisk} type="sizeOnDisk"/>
         </div>
       </div>
@@ -87,8 +107,13 @@ export default async function Home() {
   );
 }
 
-async function fetchData(type: string, endpoint: string, params: any) {
-  const queryString = new URLSearchParams(params).toString();
+async function fetchData(type: string, endpoint: string, params: Params) {
+  const queryString = new URLSearchParams(
+    Object.entries(params).reduce((acc, [key, value]) => {
+      acc[key] = value.toString();
+      return acc;
+    }, {} as Record<string, string>)
+  ).toString();
   const reqHeaders = new Headers();
   let url = "";
   if (type === "jellyfin") {
@@ -101,6 +126,10 @@ async function fetchData(type: string, endpoint: string, params: any) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     url = `${process.env.RADARR_URL}/api/v3/${endpoint}?${queryString}`
     reqHeaders.set("X-Api-Key", `${process.env.RADARR_API_KEY}`);
+  } else if (type === "sonarr") {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    url = `${process.env.SONARR_URL}/api/v3/${endpoint}?${queryString}`
+    reqHeaders.set("X-Api-Key", `${process.env.SONARR_API_KEY}`);
   }
   const options = {
     headers: reqHeaders
@@ -108,7 +137,7 @@ async function fetchData(type: string, endpoint: string, params: any) {
   const response = await fetch(url, options);
 
   if (!response.ok) {
-    throw new Error('Network response was not ok');
+    console.warn('Request failed:', response.url, response.status, response.statusText);
   }
 
   const data = await response.json();
@@ -118,26 +147,44 @@ async function fetchData(type: string, endpoint: string, params: any) {
   return data;
 }
 
-async function report(type: string, endpoint: string, params: any) {
+async function report(type: string, endpoint: string, params: Params) {
   const cachedFetchData = unstable_cache(fetchData, [endpoint], { revalidate: 3600 });
   const data = await cachedFetchData(type, endpoint, params);
   return data;
 }
 
-async function getUserSizeOnDisk(tags: any[]) {
-  let userSizeOnDisk = {};
+async function getUserSizeOnDisk(radarrTags: Tag[], sonarrTags: Tag[]) {
+  const userSizeOnDisk: Record<string, number> = {};
 
-  for (const tag of tags) {
+  for (const tag of radarrTags) {
     if (/^\d+ - .+$/.test(tag.label)) {
       const tagDetail = await report("radarr", `tag/detail/${tag.id}`, {});
       let totalSize = 0;
 
       for (const movieId of tagDetail.movieIds) {
-        const movie = await report("radarr", `movie/${movieId}`, {});
+        const movie: Movie = await report("radarr", `movie/${movieId}`, {});
         totalSize += movie.sizeOnDisk;
       }
 
       userSizeOnDisk[tag.label] = totalSize / (1024 * 1024 * 1024); // Convert to gigabytes
+    }
+  }
+
+  for (const tag of sonarrTags) {
+    if (/^\d+ - .+$/.test(tag.label)) {
+      const tagDetail = await report("sonarr", `tag/detail/${tag.id}`, {});
+      let totalSize = 0;
+
+      for (const seriesId of tagDetail.seriesIds) {
+        const series: Series = await report("sonarr", `series/${seriesId}`, {});
+        totalSize += series.statistics.sizeOnDisk;
+      }
+
+      if (userSizeOnDisk[tag.label]) {
+        userSizeOnDisk[tag.label] += totalSize / (1024 * 1024 * 1024);
+      } else {
+        userSizeOnDisk[tag.label] = totalSize / (1024 * 1024 * 1024);
+      }
     }
   }
 
