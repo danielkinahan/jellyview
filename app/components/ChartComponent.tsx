@@ -22,47 +22,44 @@ const ChartComponent: React.FC<ChartComponentProps> = ({ data, type }) => {
   const [chartData, setChartData] = useState<any>(null);
 
   useEffect(() => {
-    function seconds2hours(seconds: number) {
-      return seconds / 3600.0;
-    }
+    const seconds2hours = (seconds: number) => seconds / 3600.0;
 
-    if (Array.isArray(data)) {
-      let sortedData;
-      if (type === "totalPlayTime") {
-        sortedData = data.sort((a: any, b: any) => b.total_time - a.total_time).slice(0, 10);
-        setChartData({
-          labels: sortedData.map((item: any) => item.user_name),
-          datasets: [
-            {
-              label: 'Hours',
-              data: sortedData.map((item: any) => seconds2hours(item.total_time)),
-              backgroundColor: 'rgba(153, 102, 255, 0.2)',
-              borderColor: 'rgba(153, 102, 255, 1)',
-              borderWidth: 1,
-            },
-          ],
-        });
-      } else {
-        sortedData = data.sort((a: any, b: any) => b.time - a.time).slice(0, 10);
-        setChartData({
-          labels: sortedData.map((item: any) => item.label),
-          datasets: [
-            {
-              label: 'Hours',
-              data: sortedData.map((item: any) => seconds2hours(item.time)),
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              borderColor: 'rgba(75, 192, 192, 1)',
-              borderWidth: 1,
-            },
-          ],
-        });
-      }
+    if (Array.isArray(data) || type === "sizeOnDisk") {
+      const sortedData = Array.isArray(data)
+        ? data.sort((a: any, b: any) => {
+            if (type === "totalPlayTime") return b.total_time - a.total_time;
+            if (type === "requests") return b.requestCount - a.requestCount;
+            return b.time - a.time;
+          }).slice(0, 10)
+        : Object.entries(data)
+            .map(([label, sizeOnDisk]) => ({ label: label.replace(/^\d+ - /, ''), sizeOnDisk }))
+            .sort((a: any, b: any) => b.sizeOnDisk - a.sizeOnDisk);
+
+      setChartData({
+        labels: sortedData.map((item: any) => {
+          if (type === "totalPlayTime") return item.user_name;
+          if (type === "requests") return item.displayName;
+          return item.label;
+        }),
+        datasets: [
+          {
+            label: type === "requests" ? 'Requests' : type === "sizeOnDisk" ? 'Size on Disk (GB)' : 'Hours',
+            data: sortedData.map((item: any) => {
+              if (type === "totalPlayTime") return seconds2hours(item.total_time);
+              if (type === "requests") return item.requestCount;
+              if (type === "sizeOnDisk") return item.sizeOnDisk;
+              return seconds2hours(item.time);
+            }),
+            backgroundColor: type === "totalPlayTime" ? 'rgba(153, 102, 255, 0.2)' : 'rgba(75, 192, 192, 0.2)',
+            borderColor: type === "totalPlayTime" ? 'rgba(153, 102, 255, 1)' : 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+          },
+        ],
+      });
     } else {
       console.error('Data is not an array:', data);
     }
   }, [data, type]);
-
-
 
   return (
     <div>
