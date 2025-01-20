@@ -1,0 +1,8 @@
+services:
+  jellyview:
+    # In accordance with semantic versioning spec, any version bump under 1.0.0 could include breaking changes. 
+    image: ghcr.io/danielkinahan/jellyview:latest
+    container_name: jellyview
+    ports:
+      - 3000:3000
+    env_file: .env

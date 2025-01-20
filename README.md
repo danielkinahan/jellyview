@@ -1,13 +1,24 @@
 # Jellyview
 
-Jellyview is a user-facing dashboard for Jellyfin statistics. This project aims to provide an intuitive and comprehensive interface to monitor and analyze your Jellyfin media server's performance and usage.
+Jellyview is a user-facing dashboard for Jellyfin statistics. This project aims to provide an intuitive and comprehensive interface to monitor and analyze your media server's performance and usage.
+
+## Integrations
+
+### Jellyfin
+Shows all-time and monthly statistics of your movies, tv series and users.
+
+### Jellyseerr
+Shows amount of requests made by each user
+
+### Radarr and Sonarr
+Shows total size on disk of each users requests.
 
 ## Getting Started
 
-First, run the development server:
-
-```bash
-npm run dev
+Copy `compose.yml` and `.env.example` to a folder on your server. Input your env vars and run
+```
+mv env.example .env
+docker compose up -d # or podman compose up -d
 ```
 
 ## Project Goals

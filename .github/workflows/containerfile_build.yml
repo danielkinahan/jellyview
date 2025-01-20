@@ -19,11 +19,11 @@ jobs:
       uses: redhat-actions/buildah-build@v2
       with:
         image: ${{ env.IMAGE_NAME}}
-        tags: ${{ github.ref_name }} ${{ github.sha }}
+        tags: ${{ github.ref_name }} ${{ github.sha }} latest
         containerfiles: |
           ./Containerfile
 
-    - name: Push to GCR
+    - name: Push to ghcr
       uses: redhat-actions/push-to-registry@v2
       with:
         image: ${{ steps.build-image.outputs.image }}
